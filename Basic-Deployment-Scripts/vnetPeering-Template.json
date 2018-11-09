@@ -1,0 +1,86 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "The location in which to deploy this virtual network."
+            }
+        },
+        "vNetAName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name for vNet A"
+            }
+        },
+        "vNetBName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name for vNet B"
+            }
+        },
+        "vNetAResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource Group VNET A is deployed in"
+            }
+        },
+        "vNetBResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource Group VNET B is deployed in"
+            }
+        },
+        "remoteGatewayVNet": {
+            "type": "string",
+            "metadata": {
+                "description": "Which vnet contains the remote gateway"
+            }
+        },
+        "allowForwardedTraffic": {
+            "type": "bool",
+            "metadata": {
+                "description": "Allow forwarded traffic"
+            }
+        }
+    },
+    "variables": {
+        "vnetAID": "[resourceId(parameters('vNetAResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('vNetAName'))]",
+        "vnetBID": "[resourceId(parameters('vNetBResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('vNetBName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('vNetAName'), '/', parameters('vNetAName'), '-', parameters('vNetBName'))]",
+            "location": "[parameters('location')]",
+            "comments": "This is the peering from vNet 1 to vNet 2",
+            "properties": {
+                "allowVirtualNetworkAccess": "true",
+                "allowForwardedTraffic": "[parameters('allowForwardedTraffic')]",
+                "allowGatewayTransit": "[if(equals(parameters('remoteGatewayVnet'), parameters('vNetAName')), bool('True'), bool('False'))]",
+                "useRemoteGateways": "[if(equals(parameters('remoteGatewayVnet'),parameters('vNetAName')), bool('False'), bool('True'))]",
+                "remoteVirtualNetwork": {
+                    "id": "[variables('vnetBID')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('vNetBName'), '/', parameters('vNetBName'), '-', parameters('vNetAName'))]",
+            "location": "[parameters('location')]",
+            "comments": "This is the peering from vNet B to vNet A",
+            "properties": {
+                "allowVirtualNetworkAccess": "true",
+                "allowForwardedTraffic": "[parameters('allowForwardedTraffic')]",
+                "allowGatewayTransit": "[if(equals(parameters('remoteGatewayVnet'),parameters('vNetBName')), bool('True'), bool('False'))]",
+                "useRemoteGateways": "[if(equals(parameters('remoteGatewayVnet'),parameters('vNetBName')), bool('False'), bool('True'))]",
+                "remoteVirtualNetwork": {
+                    "id": "[variables('vnetAID')]"
+                }
+            }
+        }
+    ]
+}
